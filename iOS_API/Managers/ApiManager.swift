@@ -12,47 +12,52 @@ import SwiftyJSON
 
 class ApiManager {
     static var shared = ApiManager()
+    private var token = ""
+    let BASE_URL: String = "https://sistema.globalpaq.net/api/v2/public"
     
-    var BASE_URL: String {
-        get {return "https://sistema.globalpaq.net/api/v2/public"}
-    }
-    
-    func login(email: String, password: String) {
-        let headers: HTTPHeaders = [
-            "Content-Type": "application/x-www-form-urlencoded"
-        ]
-        let parameters: [String: String] = [
-            "correo" : email,
-            "password" : password
-        ]
+    func login(email: String, password: String, completion: @escaping (Bool, String) -> Void) {
+        
+            let headers: HTTPHeaders = [
+                "Content-Type": "application/x-www-form-urlencoded"
+            ]
+            let parameters: [String: String] = [
+                "correo" : email,
+                "password" : password
+            ]
+        
         Alamofire.request(BASE_URL + "/asociado/login",
                           method: .post,
                           parameters: parameters,
                           headers: headers
         ).responseJSON { response in
             //print(response!)
-            switch response.result {
-            case .success(let value):
-                let json = JSON(value)
-                //debugPrint(json)
-                
-                let authResponse = AuthResponse.fromJSON(json: json)
-                
-                let token = authResponse.data.token
-                Globals.shared.TOKEN = token
-                //debugPrint("token: \(Globals.shared.TOKEN)")
-                
-                self.getAvailable(token: token)
+            
+                switch response.result {
+                case .success(let value):
+                    let json = JSON(value)
+                    //debugPrint(json)
+        
+                    let authResponse = AuthResponse.fromJSON(json: json)
+                    
+                    if authResponse.data.message.isEmpty{
+                        self.token = authResponse.data.token
+                        debugPrint("token: \(self.token)")
+                        completion(true, "token is ready")
+                    } else {
+                        debugPrint("message: \(authResponse.data.message)")
+                        completion(false, authResponse.data.message)
+                    }
 
-            case .failure(let error):
-                print (error)
+                case .failure(let error):
+                    debugPrint(error)
+                    completion(false, "failure in response")
+                }
             }
-        }
-    }
+}
     
-    func getAvailable(token: String) {
+    func getAvailable(completion: @escaping ([AvailableData]) -> Void) {
         let headers: HTTPHeaders = [
-            "Authorization": token
+            "Authorization": self.token
         ]
         Alamofire.request(BASE_URL + "/dhl/disponibles",
                           method: .get,
@@ -65,10 +70,12 @@ class ApiManager {
                     //debugPrint(json)
                     
                     let getAvailable = AvailableResponse.fromJSON(json: json)
-                    //debugPrint("data available: \(getAvailable.data[0].descripcion)")
+                    debugPrint("data available: \(getAvailable.data.count)")
+                    completion(getAvailable.data)
                     
                 case .failure(let error):
                     print (error)
+                    completion([AvailableData]())
                 }
         }
     }

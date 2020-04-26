@@ -8,10 +8,16 @@
 
 import SwiftUI
 
-struct ContentView: View {
+struct LoginView: View {
     @State private var email: String = "pruebas@globalpaq.com"
     @State private var password: String = "pruebas"
     @State private var isLogged: Bool = false
+    @State private var errorInLogin: Bool = false
+    @State private var errorMessage: String = ""
+    
+    private func errorAlert(title: String, message: String) -> Alert {
+        return Alert(title: Text(title), message: Text(message), dismissButton: .default(Text("Aceptar")))
+    }
     
     var body: some View {
         NavigationView{
@@ -24,9 +30,11 @@ struct ContentView: View {
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                 }
                 .padding(.bottom, 50)
-                NavigationLink(destination: DetailView(), isActive: $isLogged) {
+                
+                NavigationLink(destination: MainView(), isActive: $isLogged) {
                     Text("Show Detail View")
                 }.hidden()
+                
                 Button(action: {
                     
                     if (self.email.isEmpty){
@@ -37,13 +45,21 @@ struct ContentView: View {
                         return
                     }
                     
-                    print("correo: " + self.email.lowercased())
-                    print("password: " + self.password.lowercased())
+                    debugPrint("correo: " + self.email.lowercased())
+                    debugPrint("password: " + self.password.lowercased())
                     
                     ApiManager.shared.login(
-                        email: self.email.lowercased(),
-                        password: self.password.lowercased())
-                    
+                            email: self.email.lowercased(),
+                            password: self.password.lowercased(),
+                            completion: {loginResult, message in
+                                self.isLogged = loginResult
+                                self.errorMessage = message
+                                
+                                if !self.isLogged{
+                                    self.errorInLogin.toggle()
+                                }
+                    })
+                
                     }) {
                     Text("Iniciar Sesion")
                         .padding(10)
@@ -51,75 +67,51 @@ struct ContentView: View {
                         .foregroundColor(.white)
                         .font(.body)
                         .cornerRadius(15)
+                }.alert(isPresented: self.$errorInLogin) { () -> Alert in
+                    errorAlert(title: "Error", message: self.errorMessage)
                 }
-                .navigationBarTitle("Inicio de Sesion")
-            }
+            }.navigationBarTitle("Inicio")
             .padding(.horizontal, 20.0)
         }
-        
     }
 }
 
-struct DetailView: View {
-    var body: some View {
-        Text("This is the detail view")
-    }
-}
-
-struct Toast<Presenting>: View where Presenting: View {
+struct MainView: View {
     
-    /// The binding that decides the appropriate drawing in the body.
-    @Binding var isShowing: Bool
-    /// The view that will be "presenting" this toast
-    let presenting: () -> Presenting
-    /// The text to show
-    let text: Text
+    @State private var availableItems = [AvailableData]()
     
     var body: some View {
-        
-        GeometryReader { geometry in
-            
-            ZStack(alignment: .center) {
-                
-                self.presenting()
-                    .blur(radius: self.isShowing ? 1 : 0)
-                
-                VStack {
-                    self.text
-                }
-                .frame(width: geometry.size.width / 2,
-                       height: geometry.size.height / 5)
-                    .background(Color.secondary.colorInvert())
-                    .foregroundColor(Color.primary)
-                    .cornerRadius(20)
-                    .transition(.slide)
-                    .opacity(self.isShowing ? 1 : 0)
-                    .onAppear {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                            withAnimation {
-                                self.isShowing = false
-                            }
+        List {
+            ForEach(availableItems) { item in
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Text("Descripcion: \(item.descripcion)")
+                        Spacer()
+                        if item.activo {
+                            Image(systemName: "checkmark.circle").foregroundColor(.green)
+                        } else {
+                            Image(systemName: "circle").foregroundColor(.gray)
                         }
+                    }
+                    Text("tipo: \(item.tipo)")
+                    Text("peso: \(item.peso)")
+                    Text("total: \(item.total)")
+                    Text("disponibles: \(item.disponibles)")
+                    Text("usadas: \(item.usadas)")
                 }
+            }
+        }.onAppear {
+            ApiManager.shared.getAvailable { itemList in
+                self.availableItems = itemList
             }
         }
     }
 }
 
-extension View {
-    
-    func toast(isShowing: Binding<Bool>, text: Text) -> some View {
-        Toast(isShowing: isShowing,
-              presenting: { self },
-              text: text)
-    }
-    
-}
-
-
-
+#if DEBUG
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
-        ContentView()
+        LoginView()
     }
 }
+#endif

@@ -42,7 +42,7 @@ class AvailableResponse {
 }
 
 // MARK: - AvailableData
-class AvailableData {
+class AvailableData : Identifiable {
     var tipo: String
     var peso, disponibles, usadas: Int
     var descripcion: String

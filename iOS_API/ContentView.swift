@@ -8,12 +8,18 @@
 
 import SwiftUI
 
+struct AlertItem: Identifiable {
+    var id = UUID()
+    var title: Text
+    var message: Text?
+    var dismissButton: Alert.Button?
+}
+
 struct LoginView: View {
     @State private var email: String = "pruebas@globalpaq.com"
     @State private var password: String = "pruebas"
     @State private var isLogged: Bool = false
-    @State private var errorInLogin: Bool = false
-    @State private var errorMessage: String = ""
+    @State private var alertItem: AlertItem?
     
     private func errorAlert(title: String, message: String) -> Alert {
         return Alert(title: Text(title), message: Text(message), dismissButton: .default(Text("Aceptar")))
@@ -38,10 +44,12 @@ struct LoginView: View {
                 Button(action: {
                     
                     if (self.email.isEmpty){
+                        self.alertItem = AlertItem(title: Text("Falta correo"), message: Text("El correo no puede estar vacio"))
                         return
                     }
                     
                     if (self.password.isEmpty){
+                        self.alertItem = AlertItem(title: Text("Falta contraseña"), message: Text("La contraseña no puede estar vacia"))
                         return
                     }
                     
@@ -53,10 +61,9 @@ struct LoginView: View {
                             password: self.password.lowercased(),
                             completion: {loginResult, message in
                                 self.isLogged = loginResult
-                                self.errorMessage = message
                                 
                                 if !self.isLogged{
-                                    self.errorInLogin.toggle()
+                                    self.alertItem = AlertItem(title: Text("No se puede iniciar sesion"), message: Text(message))
                                 }
                     })
                 
@@ -67,8 +74,8 @@ struct LoginView: View {
                         .foregroundColor(.white)
                         .font(.body)
                         .cornerRadius(15)
-                }.alert(isPresented: self.$errorInLogin) { () -> Alert in
-                    errorAlert(title: "Error", message: self.errorMessage)
+                }.alert(item: $alertItem) { alertItem in
+                    Alert(title: alertItem.title, message: alertItem.message, dismissButton: alertItem.dismissButton)
                 }
             }.navigationBarTitle("Inicio")
             .padding(.horizontal, 20.0)

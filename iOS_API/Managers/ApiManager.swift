@@ -13,7 +13,7 @@ import SwiftyJSON
 class ApiManager {
     static var shared = ApiManager()
     private var token = ""
-    let BASE_URL: String = "https://sistema.globalpaq.net/api/v2/public"
+    let BASE_URL: String = "https://sistema.globalpaq.mx/api/v2/public"
     
     func login(email: String, password: String, completion: @escaping (Bool, String) -> Void) {
         
